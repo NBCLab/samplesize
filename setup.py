@@ -15,7 +15,7 @@ setup(
     description='Sample size extraction for scientific writing',
     maintainer='Taylor Salo',
     maintainer_email='tsalo006@fiu.edu',
-    install_requires=['nltk', 'pandas'],
+    install_requires=requirements,
     packages=['samplesize'],
     license='MIT',
     **extra_setuptools_args

@@ -15,6 +15,7 @@ from word2number import w2n
 
 def consec(data):
     """
+    Group numbers in list into sublists of consecutive values.
     """
     ranges = []
     for key, group in groupby(enumerate(data), lambda (index, item): index - item):
@@ -26,6 +27,7 @@ def consec(data):
 
 def word2num(sentence):
     """
+    Convert number-words in sentence to numbers.
     """
     numbers = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
                'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety',
@@ -36,21 +38,38 @@ def word2num(sentence):
 
     string = '|'.join(numbers)
     full = '((' + string + ').+(' + string + '))|(' + string + ')'
-    bb = re.compile(full, re.IGNORECASE)
+    find_numwords = re.compile(full, re.IGNORECASE)
 
+    # Remove characters and words that will break w2n.
     sentence2 = re.sub(r'\band\b', '', sentence)
     sentence2 = sentence2.replace('-', ' ').replace(',', '')
     sentence2 = re.sub(r'\s+', ' ', sentence2)
     if any(number in nltk.word_tokenize(sentence2.lower()) for number in numbers):
-        found = re.search(bb, sentence2).group()
+        found = re.search(find_numwords, sentence2).group()
         words = nltk.word_tokenize(found)
         idx = [i for i in range(len(words)) if words[i].lower() in numbers]
         idx2 = consec(idx)
-        groups = [[words[i] for i in group] for group in idx2]
-        nums = [str(w2n.word_to_num(' '.join(group))) for group in groups]
+        numword_groups = [[words[i] for i in group] for group in idx2]
+        
+        switch = {}
+        c = 0
+        for group in numword_groups:
+            # word_to_num can fail for partial numbers, like 'million' from '3.1 million'
+            # if it fails, just skip that number
+            try:
+                num = str(w2n.word_to_num(' '.join(group)))
+                switch[c] = {'group': group,
+                             'num': num}
+                c += 1
+            except:
+                pass
 
-        for i in range(len(groups)):
-            sentence = sentence[:sentence.index(groups[i][0])] + nums[i] + sentence[sentence.index(groups[i][-1])+len(groups[i][-1]):]
+        # Replace number words in sentence with numbers.
+        for c in switch.keys():
+            group = switch[c]['group']
+            num = switch[c]['num']
+            sentence = (sentence[:sentence.index(group[0])] + num +
+                        sentence[sentence.index(group[-1])+len(group[-1]):])
     return sentence
 
 
@@ -67,6 +86,8 @@ def get_res():
 
 def find_candidates(sentences):
     """
+    Select sentences in list of sentences with both candidate terms (words
+    associated with samples) and numbers.
     """
     _, _, candidate_terms = get_res()
     or_term = '|'.join(candidate_terms)
@@ -74,17 +95,6 @@ def find_candidates(sentences):
 
     out_sentences = []
     for sentence in sentences:
-        if re.search(search_term, sentence):
-            out_sentences.append(sentence)
-    return out_sentences
-
-
-def reduce_candidates(sentences):
-    """
-    Take large list of condidate sentences and reduce based on
-    """
-    out_sentences = []
-    for sentence in sentences:
-        if any(char.isdigit() for char in sentence):
+        if re.search(search_term, sentence) and any(char.isdigit() for char in sentence):
             out_sentences.append(sentence)
     return out_sentences

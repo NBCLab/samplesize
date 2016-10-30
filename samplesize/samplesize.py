@@ -7,7 +7,7 @@ Created on Thu May  5 13:21:52 2016
 from glob import glob
 import pandas as pd
 import nltk
-from .utils import word2num, find_candidates, reduce_candidates, get_res
+from .utils import word2num, find_candidates, get_res
 from pattern.en import parsetree
 import re
 from os.path import join, splitext, basename
@@ -15,6 +15,8 @@ from os.path import join, splitext, basename
 
 def return_nes(sentences):
     """
+    Find noun phrases/named entities within relevant sentences that contain
+    both a candidate term and a number.
     """
     cd_cand, cd_np, candidate_terms = get_res()
     nps = []
@@ -22,7 +24,8 @@ def return_nes(sentences):
     for sentence in sentences:
         for chunk in sentence.chunks:
             match = re.match(cd_np, str(chunk))
-            if match is not None and any([term in nltk.word_tokenize(chunk.string) for term in candidate_terms]):
+            if match is not None and any([term in nltk.word_tokenize(chunk.string)\
+                                          for term in candidate_terms]):
                 np = match.group(1)
                 nps += [np]
 
@@ -30,7 +33,8 @@ def return_nes(sentences):
         out_nps = []
         for ne in nps:
             if re.match(cd_cand, ne):
-                out_nps.append((re.match(cd_cand, ne).group(2).strip(), re.match(cd_cand, ne).group(1).strip()))
+                out_nps.append((re.match(cd_cand, ne).group(2).strip(),
+                                re.match(cd_cand, ne).group(1).strip()))
 
         if len(out_nps) == 0:
             out_nps = None
@@ -46,6 +50,7 @@ def find_corpus(folder, clean=True):
     samples = []
 
     files = glob(join(folder, '*.txt'))
+    files = files[:50]
     for f in files:
         name = basename(splitext(f)[0])
         with open(f, 'rb') as fo:
@@ -55,19 +60,29 @@ def find_corpus(folder, clean=True):
             text = clean_str(text)
 
         samples.append([name, findall(text)])
-    df = pd.DataFrame(columns=['id', 'sample size'],
+    df = pd.DataFrame(columns=['id', 'samples'],
                       data=samples)
     return df
 
 
 def findall(text):
     """
+    Find sample sizes within a piece of text.
+    
+    Parameters
+    ----------
+    text : str
+        Text to clean.
+    
+    Returns
+    ----------
+    nes : list of tuples or None
+        .
     """
     sentences = nltk.sent_tokenize(text)
     sentences = [word2num(sentence) for sentence in sentences]
-    subj_sentences = find_candidates(sentences)
-    num_sentences = ' '.join(reduce_candidates(subj_sentences))
-    nes = return_nes(num_sentences)
+    cand_sentences = ' '.join(find_candidates(sentences))
+    nes = return_nes(cand_sentences)
     return nes
 
 
@@ -77,14 +92,17 @@ def clean_str(text):
         1. Remove unicode characters.
         2. Combine multiline hyphenated words.
         3. Remove newlines and extra spaces.
+    
     Parameters
     ----------
     text : str
         Text to clean.
+    
     Returns
     ----------
     text : str
         Cleaned text.
+    
     Examples
     ----------
     >>> text = 'I am  a \nbad\r\n\tstr-\ning.'
