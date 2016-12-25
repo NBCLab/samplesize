@@ -20,25 +20,43 @@ def return_nes(sentences):
     """
     cd_cand, cd_np, candidate_terms = get_res()
     nps = []
+    
+    # The parser keeps n=X together, but separates n = X.
+    sentences = re.sub('n = ', 'n=', sentences)
     sentences = parsetree(sentences)
-    for sentence in sentences:
-        for chunk in sentence.chunks:
-            match = re.match(cd_np, str(chunk))
-            if match is not None and any([term in nltk.word_tokenize(chunk.string)\
-                                          for term in candidate_terms]):
-                np = match.group(1)
-                nps += [np]
+    for sentence in sentences:       
+        for i, chunk in enumerate(sentence.chunks):            
+            if any([term in nltk.word_tokenize(chunk.string) for term in\
+                    candidate_terms]):
+                # n = X type
+                for j in range(i+1, len(sentence.chunks)):
+                    if any([term in nltk.word_tokenize(sentence.chunks[j].string)\
+                            for term in candidate_terms]):
+                        break
+                    
+                    match0 = re.match('\s*n=(\d+)', sentence.chunks[j].string)
+                    if match0 is not None:
+                        n = match0.group(1)
+                        chunks = sentence.chunks[i:j]
+                        chunks = [n] + [c.string for c in chunks]
+                        np = ' '.join(chunks)
+                        nps += [np]
+                        break
+                
+                # X subjects type
+                match1 = re.match(cd_np, str(chunk))
+                if match1 is not None:
+                    np = match1.group(1)
+                    nps += [np]
 
-    if len(nps)>0:
-        out_nps = []
-        for ne in nps:
-            if re.match(cd_cand, ne):
-                out_nps.append((re.match(cd_cand, ne).group(2).strip(),
-                                re.match(cd_cand, ne).group(1).strip()))
+    # One final check
+    out_nps = []
+    for ne in nps:            
+        if re.match(cd_cand, ne):
+            out_nps.append((re.match(cd_cand, ne).group(2).strip(),
+                            re.match(cd_cand, ne).group(1).strip()))
 
-        if len(out_nps) == 0:
-            out_nps = None
-    else:
+    if len(out_nps) == 0:
         out_nps = None
 
     return out_nps
@@ -46,11 +64,26 @@ def return_nes(sentences):
 
 def find_corpus(folder, clean=True):
     """
+    Find sample sizes for all text files in folder.
+    
+    Parameters
+    ----------
+    folder : str
+        Folder containing text files from which to extract sample sizes.
+    
+    clean : bool
+        To clean the strings from the text files or not. Default = True.
+    
+    Returns
+    ----------
+    df : pandas.DataFrame
+        DataFrame where row index is the name of the file and the first
+        column's values are the found sample sizes.
     """
     samples = []
 
     files = glob(join(folder, '*.txt'))
-    files = files[:50]
+    files = files[100:500]
     for f in files:
         name = basename(splitext(f)[0])
         with open(f, 'rb') as fo:
@@ -77,7 +110,7 @@ def findall(text):
     Returns
     ----------
     nes : list of tuples or None
-        .
+        Pairs of sample sizes and groups.
     """
     sentences = nltk.sent_tokenize(text)
     sentences = [word2num(sentence) for sentence in sentences]
