@@ -1,5 +1,5 @@
 # sample-size
-Sample size extraction.
+Sample size extraction from scientific writing. Currently designed for abstracts of articles with human subjects, but can be improved for other uses.
 
 Installation
 --
