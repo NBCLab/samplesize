@@ -20,12 +20,12 @@ def return_nes(sentences):
     """
     cd_cand, cd_np, candidate_terms = get_res()
     nps = []
-    
+
     # The parser keeps n=X together, but separates n = X.
     sentences = re.sub('n = ', 'n=', sentences)
     sentences = parsetree(sentences)
-    for sentence in sentences:       
-        for i, chunk in enumerate(sentence.chunks):            
+    for sentence in sentences:
+        for i, chunk in enumerate(sentence.chunks):
             if any([term in nltk.word_tokenize(chunk.string) for term in\
                     candidate_terms]):
                 # n = X type
@@ -33,7 +33,7 @@ def return_nes(sentences):
                     if any([term in nltk.word_tokenize(sentence.chunks[j].string)\
                             for term in candidate_terms]):
                         break
-                    
+
                     match0 = re.match('\s*n=(\d+)', sentence.chunks[j].string)
                     if match0 is not None:
                         n = match0.group(1)
@@ -42,7 +42,7 @@ def return_nes(sentences):
                         np = ' '.join(chunks)
                         nps += [np]
                         break
-                
+
                 # X subjects type
                 match1 = re.match(cd_np, str(chunk))
                 if match1 is not None:
@@ -51,7 +51,7 @@ def return_nes(sentences):
 
     # One final check
     out_nps = []
-    for ne in nps:            
+    for ne in nps:
         if re.match(cd_cand, ne):
             out_nps.append((re.match(cd_cand, ne).group(2).strip(),
                             re.match(cd_cand, ne).group(1).strip()))
@@ -65,15 +65,15 @@ def return_nes(sentences):
 def find_corpus(folder, clean=True):
     """
     Find sample sizes for all text files in folder.
-    
+
     Parameters
     ----------
     folder : str
         Folder containing text files from which to extract sample sizes.
-    
+
     clean : bool
         To clean the strings from the text files or not. Default = True.
-    
+
     Returns
     ----------
     df : pandas.DataFrame
@@ -83,7 +83,6 @@ def find_corpus(folder, clean=True):
     samples = []
 
     files = glob(join(folder, '*.txt'))
-    files = files[100:500]
     for f in files:
         name = basename(splitext(f)[0])
         with open(f, 'rb') as fo:
@@ -101,12 +100,12 @@ def find_corpus(folder, clean=True):
 def findall(text):
     """
     Find sample sizes within a piece of text.
-    
+
     Parameters
     ----------
     text : str
         Text to clean.
-    
+
     Returns
     ----------
     nes : list of tuples or None
@@ -125,17 +124,17 @@ def clean_str(text):
         1. Remove unicode characters.
         2. Combine multiline hyphenated words.
         3. Remove newlines and extra spaces.
-    
+
     Parameters
     ----------
     text : str
         Text to clean.
-    
+
     Returns
     ----------
     text : str
         Cleaned text.
-    
+
     Examples
     ----------
     >>> text = 'I am  a \nbad\r\n\tstr-\ning.'
